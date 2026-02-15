@@ -1,0 +1,3 @@
+to run virtual environment run:
+
+source venv/bin/activate
