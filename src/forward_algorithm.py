@@ -33,7 +33,7 @@ def forward_algo(observations, stat_dist):
             
             # Reset to the initial distribution at the start of each new hand
             elif street_index == 0:
-                alpha = np.matmul(alpha, stat_dist)
+                alpha = np.matmul(alpha, np.diag(stat_dist))
                 alpha = np.matmul(alpha, q_matrix)
 
             # Use corresponding transition matrix for street
@@ -66,3 +66,5 @@ def print_forward_algo_results():
     # Print the predictions
     df['predicted_strategy'] = predictions
     print(df[['true_strategy', 'predicted_strategy']])
+    accuracy = (df['true_strategy'] == df['predicted_strategy']).mean()
+    print(f"Accuracy: {accuracy:.2%}")
