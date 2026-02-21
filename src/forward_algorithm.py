@@ -4,12 +4,16 @@ import pandas as pd
 from constants import *
 
 
-def forward_algo(observations, stat_dist):
+def forward_algo(observations):
     """
-    Forward algorithm with street-dependent transition matrices.
-    Assumes 4 observations per hand (Preflop, Flop, Turn, River).
+    Run forward algorithm for HMM with street-dependent transitions.
+    
+    Args:
+        observations (list): Sequence of actions (0-4) across multiple hands (string representation)
+    
+    Returns:
+        list: Probability of observations under each strategy in STRATEGY_TYPES
     """
-
     # Initialise Q matrix & probabilities array
     Q = OBS_LIKELIHOOD
     probabilities = []
@@ -29,11 +33,11 @@ def forward_algo(observations, stat_dist):
 
             # Initialise alpha
             if alpha is None:
-                alpha = np.matmul(stat_dist, q_matrix)
+                alpha = np.matmul(STAT_DIST, q_matrix)
             
             # Reset to the initial distribution at the start of each new hand
             elif street_index == 0:
-                alpha = np.matmul(alpha, np.diag(stat_dist))
+                alpha = np.matmul(alpha, np.diag(STAT_DIST))
                 alpha = np.matmul(alpha, q_matrix)
 
             # Use corresponding transition matrix for street
@@ -48,7 +52,18 @@ def forward_algo(observations, stat_dist):
 
 
 def print_forward_algo_results():
-    """Run forward algorithm on test data and print strategy predictions"""
+    """
+    Run forward algorithm on player data and print strategy predictions.
+    
+    Reads from 'data/player_data.tsv', which contains:
+        - true_strategy: Actual strategy used
+        - actions: List of actions (as string representation)
+        - true_states: List of hand strengths (as string representation)
+    
+    Prints:
+        DataFrame with true vs predicted strategies
+        Overall accuracy percentage
+    """
     # Load the test data
     df = pd.read_csv('data/player_data.tsv', sep='\t')
 
@@ -60,7 +75,7 @@ def print_forward_algo_results():
     predictions = []
     for i in range(len(df)):
         obs = df['actions'].iloc[i]    
-        probs = forward_algo(obs, STAT_DIST)
+        probs = forward_algo(obs)
         predictions.append(STRATEGY_TYPES[np.argmax(probs)])
 
     # Print the predictions
