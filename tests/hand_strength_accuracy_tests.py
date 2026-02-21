@@ -10,6 +10,19 @@ from generate_data import *
 import random
 
 def evaluate_estimator_accuracy(filename, n_board, n_hands=100, n_trials=100):
+    """
+    Evaluate hand strength estimator accuracy for a given street.
+    
+    Args:
+        filename (str): Path to output TSV file
+        n_board (int): Number of community cards (0=preflop, 3=flop, 4=turn, 5=river)
+        n_hands (int): Number of random hands to test
+        n_trials (int): Number of Monte Carlo trials per hand
+    
+    Creates:
+        TSV file with columns: Hand, VeryWeak, Weak, Moderate, Strong, VeryStrong
+        Each row contains proportions of how often the hand was classified in each category.
+    """
     with open(filename, 'w', newline='') as tsvfile:
         writer = csv.writer(tsvfile, delimiter='\t')
 
