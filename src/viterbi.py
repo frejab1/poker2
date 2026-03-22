@@ -86,6 +86,8 @@ def print_viterbi_results():
     margin_correct = 0
     total = 0
     
+    print("True States  Predicted States")
+    
     for i in range(len(df)):
         strategy = df['true_strategy'].iloc[i]
         actions = df['actions'].iloc[i]
@@ -93,7 +95,7 @@ def print_viterbi_results():
         
         # Split into hands of 4 rounds each
         n_hands = int(len(actions) // 4)
-        
+        print(f"Player {i}:")
         for hand in range(n_hands):
             start = hand * 4
             end = start + 4
@@ -111,18 +113,14 @@ def print_viterbi_results():
             # Exact match
             if pred == true:
                 exact_correct += 1
-            
-            # Within ±1
-            if abs(pred - true) <= 1:
-                margin_correct += 1
-            
+            print(hand_true_states, pred_states)
+                
             total += 1
-    
+
     # Calculate accuracies
     exact_accuracy = exact_correct / total if total > 0 else 0
     margin_accuracy = margin_correct / total if total > 0 else 0
     
-    print(f"Viterbi River state prediction accuracy (exact): {exact_accuracy:.2%}")
-    print(f"Viterbi River state prediction accuracy (±1 category): {margin_accuracy:.2%}")
+    print(f"Viterbi River state prediction accuracy : {exact_accuracy:.2%}")
     
     return exact_accuracy, margin_accuracy
