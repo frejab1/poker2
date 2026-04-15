@@ -5,6 +5,7 @@
 This project implements Hidden Markov Models (HMMs) for poker strategy analysis and hand strength inference. It simulates poker player behavior, estimates playing styles, and infers hidden hand strengths from observed actions.
 
 ## Project Structure
+```bash
 ├── data/ # Generated data output directory
 ├── src/
 │ ├── calc_transitions.py # Transition matrix calculation
@@ -24,7 +25,7 @@ This project implements Hidden Markov Models (HMMs) for poker strategy analysis 
 ├── venv/ # Virtual environment for running Python
 ├── README.md
 └── requirements.txt # Project dependencies
-
+```
 
 
 ## Key Features
