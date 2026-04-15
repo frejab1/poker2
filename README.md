@@ -15,13 +15,13 @@ This project implements Hidden Markov Models (HMMs) for poker strategy analysis 
 │ ├── main.py # Main execution pipeline
 │ ├── plots.py # Visualisation functions
 │ ├── strategy_estimator.py # Bayesian strategy posterior
-│ └──  viterbi.py # Viterbi algorithm for hand strength inference
+│ └── viterbi.py # Viterbi algorithm for hand strength inference
 ├── tests/
 │ ├── hand_strength_tests.py # Hand strength estimator tests
 │ ├── inference_tests.py # Combined inference tests
 │ ├── matrices_tests.py # Matrix validation tests
 │ └── viterbi_tests.py # Viterbi algorithm tests
-├── venv/   # Virtual environment for running Python
+├── venv/ # Virtual environment for running Python
 ├── README.md
 └── requirements.txt # Project dependencies
 
