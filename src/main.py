@@ -6,6 +6,7 @@ from forward_algorithm import print_forward_algo_results
 from viterbi import print_viterbi_results
 from constants import *
 from strategy_estimator import print_strategy_estimation_results
+from plots import *
 
 def main():
     """Run the complete poker HMM analysis pipeline."""
@@ -24,22 +25,37 @@ def main():
 
     # Generate simulated poker player data
     print("\n[1/4] Generating player data...")
-    player_data(10, 5)
+    player_data(10000, 5)
     print("Player data saved to ./data/player_data.tsv")
 
     # Forward algorithm
     print("\n[2/4] Running Forward Algorithm for strategy estimation...")
-    print_forward_algo_results()
+    print_forward_algo_results('data/player_data.tsv')
 
     # Strategy Posterior
     print("\n[3/4] Running strategy posterior estimation...")
-    print_strategy_estimation_results()
+    print_strategy_estimation_results('data/player_data.tsv')
 
     # Run the Viterbi Algorithm to get a player's most likely hand strength sequence for this hand
     print("\n[4/4] Running Viterbi Algorithm for hand strength inference...")
-    print_viterbi_results()
+    print_viterbi_results('data/player_data.tsv', "Forward Algorithm")
+    print_viterbi_results('data/player_data.tsv', "Bayes' Inference")
+
+    # Plot the results
+    print("\nPlotting results...")
+    plot_strategy_accuracy()
+    print("\n...1/5 plotted")
+    plot_hand_strength_heatmap()
+    print("\n...2/5 plotted")
+    plot_hand_strength_over_streets()
+    print("\n...3/5 plotted")
+    plot_accuracy_vs_rounds()
+    print("\n...4/5 plotted")
+    plot_time_vs_rounds()
+    print("\n...5/5 plotted")
 
     print("\n" + "=" * 60)
+    
 
 if __name__ == "__main__":
     main()

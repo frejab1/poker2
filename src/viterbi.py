@@ -5,7 +5,9 @@ from constants import *
 
 def viterbi_algo(strategy, obs):
     """
-    Run Viterbi algorithm to find most likely hand strength sequence.
+    Run the Viterbi algorithm to the find most likely hand strength sequence for a string of observations, 
+    given inferred strategy type.
+    This uses a trellis framework to move between states and keep track of parent nodes.
     
     Args:
         strategy (str): Player strategy from STRATEGY_TYPES
@@ -46,7 +48,7 @@ def viterbi_algo(strategy, obs):
             parent_states[t, j] = np.argmax(probs)
     
 
-    # Find the best overall path 
+    # Initialise an array to store the best overall path 
     best_path = np.zeros(n_rounds, dtype=int)
     # Get position of best state in the final round
     best_path[-1] = np.argmax(delta[-1, :])
@@ -61,41 +63,45 @@ def viterbi_algo(strategy, obs):
     return best_path.tolist(), best_prob
 
 
-def print_viterbi_results():
+def print_viterbi_results(filepath, method):
     """
-    Run Viterbi algorithm on player data to infer hand strength sequences.
-    
-    Reads from 'data/player_data.tsv', which contains:
-        - true_strategy: Actual strategy used
-        - actions: List of actions across multiple hands (as string representation)
-        - true_states: List of hand strengths across multiple hands (as string representation)
-    
+    Run the Viterbi algorithm on player data to infer hand strength sequences, using a given filepath and strategy inference method.
     The actions and states are split into chunks of 4 (one hand each), and Viterbi is run separately on each hand. 
-    Only the final state of each hand is considered as in real applications one would only want to know their opponents' current hand strength.
+
+    Args:
+        filepath (str): Path to player data file
+        method (str): The strategy inference method to be used, either "Forward Algorithm" of "Bayes' Inference"
 
     Prints:
-        Exact accuracy percentage for River state prediction
-        ±1 margin accuracy percentage (prediction within 1 of true value)
+        Accuracy percentage for state prediction.
     """
     # Load data
-    df = pd.read_csv('data/player_data.tsv', sep='\t')
+    df = pd.read_csv(filepath, sep='\t')
     df['actions'] = df['actions'].apply(eval)
     df['true_states'] = df['true_states'].apply(eval)
+
+    # Use the correct data for the corresponding inference method
+    if method == "Forward Algorithm":
+        pred_df = pd.read_csv('data/forward_algo_results.tsv', sep='\t')
+        column_name = "forward_pred_strategy"
+    elif method == "Bayes' Inference":
+        pred_df = pd.read_csv('data/bayes_inference_results.tsv', sep='\t')
+        column_name = "bayes_pred_strategy"
     
+    # Initialise counts and an array to store predictions
     exact_correct = 0
-    margin_correct = 0
     total = 0
-    
-    print("True States  Predicted States")
-    
+    pred_states_all = []
+        
+    # Iterate through all the player data from the given filepath
     for i in range(len(df)):
-        strategy = df['true_strategy'].iloc[i]
+        strategy = pred_df[column_name].iloc[i]
         actions = df['actions'].iloc[i]
         true_states = df['true_states'].iloc[i]
         
         # Split into hands of 4 rounds each
         n_hands = int(len(actions) // 4)
-        print(f"Player {i}:")
+        hand_preds = []
         for hand in range(n_hands):
             start = hand * 4
             end = start + 4
@@ -105,22 +111,21 @@ def print_viterbi_results():
             
             # Run Viterbi on this single hand
             pred_states, _ = viterbi_algo(strategy, hand_actions)
-            
-            # Check last element (River)
-            pred = pred_states[-1]
-            true = hand_true_states[-1]
-            
-            # Exact match
-            if pred == true:
-                exact_correct += 1
-            print(hand_true_states, pred_states)
-                
-            total += 1
+            hand_preds.extend(pred_states)  
+            # Check accuracy for each street individually
+            for t in range(4):
+                if pred_states[t] == hand_true_states[t]:
+                    exact_correct += 1
+                total += 1
+        pred_states_all.append(hand_preds)
 
     # Calculate accuracies
     exact_accuracy = exact_correct / total if total > 0 else 0
-    margin_accuracy = margin_correct / total if total > 0 else 0
     
-    print(f"Viterbi River state prediction accuracy : {exact_accuracy:.2%}")
+    print(f"Viterbi River state prediction accuracy with {method} : {exact_accuracy:.2%}")
+
+    # Append predicted states to player data
+    df[f"{column_name}_strength"] = pred_states_all
+    df.to_csv(filepath, sep='\t', index=False)
     
-    return exact_accuracy, margin_accuracy
+    return exact_accuracy

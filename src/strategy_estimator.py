@@ -32,7 +32,7 @@ def strategy_posterior(actions, states, prior=None):
     
     return {s: unnormalised[s]/total for s in STRATEGY_TYPES} if total > 0 else {s: 0 for s in STRATEGY_TYPES}
 
-def print_strategy_estimation_results():
+def print_strategy_estimation_results(filename):
     """
     Load player data and estimate strategies for each player.
     
@@ -46,7 +46,7 @@ def print_strategy_estimation_results():
         Overall accuracy percentage
     """
     # Load TSV data
-    df = pd.read_csv('data/player_data.tsv', sep='\t')
+    df = pd.read_csv(filename, sep='\t')
     df['actions'] = df['actions'].apply(eval)
     df['true_states'] = df['true_states'].apply(eval)
     predictions = []
@@ -56,7 +56,15 @@ def print_strategy_estimation_results():
         post = strategy_posterior(df['actions'].iloc[i], df['true_states'].iloc[i], prior=None)
         predictions.append(max(post, key=post.get))
 
-    # Results
-    df['predicted'] = predictions
-    print(df[['true_strategy', 'predicted']])
-    print(f"Accuracy: {(df['true_strategy'] == df['predicted']).mean():.2%}")
+    # Write results to TSV
+    df['bayes_pred_strategy'] = predictions
+    results_df = df[['true_strategy', 'bayes_pred_strategy']]
+    results_df.to_csv('./data/bayes_inference_results.tsv', sep='\t', index=False)
+
+    # Append predicted strategies to player data
+    df.to_csv('./data/player_data.tsv', sep='\t', index=False)
+
+    # Print the predictions
+    print(df[['true_strategy', 'bayes_pred_strategy']])
+    accuracy = (df['true_strategy'] == df['bayes_pred_strategy']).mean()
+    print(f"Accuracy: {accuracy:.2%}")
