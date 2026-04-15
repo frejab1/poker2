@@ -1,4 +1,4 @@
-# Poker HMM Analysis Suite
+# Hidden Markov Models for Poker Analysis
 
 ## Overview
 
