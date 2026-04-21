@@ -27,42 +27,91 @@ def plot_strategy_accuracy(data_path='./data/player_data.tsv', save_path='./data
         forward_acc.append((subset['forward_pred_strategy'] == subset['true_strategy']).mean())
         bayes_acc.append((subset['bayes_pred_strategy'] == subset['true_strategy']).mean())
     
-    # Plot the grouped bar chart
     x = np.arange(len(STRATEGY_TYPES))
-    width = 0.4
     
     fig, ax = plt.subplots(figsize=(10, 5))
     
-    bars1 = ax.bar(x - width/2, forward_acc, width, label='Forward Algorithm', color='#6C9EBF', edgecolor='black', linewidth=1)
-    bars2 = ax.bar(x + width/2, bayes_acc, width, label='Bayes\' Theorem', color='#C73E1D', edgecolor='black', linewidth=1)
-    
+    ax.plot(x - 0.1, [v * 100 for v in forward_acc], 'o', color='#6C9EBF', label='Forward Algorithm', markersize=10)
+    ax.plot(x + 0.1, [v * 100 for v in bayes_acc], 'o', color='#C73E1D', label='Bayes\' Theorem', markersize=10)
+ 
     # Remove underscores from strategy type labels
     STRATEGY_LABELS = [s.replace('_', ' ') for s in STRATEGY_TYPES]
-
+ 
     # Labels and formatting
     ax.set_xlabel('Strategy Type', fontweight='bold', labelpad=15)
-    ax.set_ylabel('Accuracy', fontweight='bold', labelpad=15)
+    ax.set_ylabel('Accuracy (%)', fontweight='bold', labelpad=15)
     ax.set_xticks(x)
     ax.set_xticklabels(STRATEGY_LABELS, ha='center')
-    ax.set_yticks(np.arange(0, 1.1, 0.1)) 
-    ax.set_ylim(0, 1.30)
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{y*100:.0f}'))
+    ax.set_yticks(np.arange(92, 101, 1))
+    ax.set_ylim(91, 101.5)
     ax.legend()
     
-    # Add value labels on top of bars
-    for bar in bars1:
-        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02,
-                f'{bar.get_height() * 100:.2f}%', ha='center', va='bottom', fontsize=10)
-    for bar in bars2:
-        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02,
-                f'{bar.get_height() * 100:.2f}%', ha='center', va='bottom', fontsize=10)
-    
-    ax.grid(True, axis='y', linestyle='-', alpha=0.35)
+    ax.grid(True, axis='both', linestyle='-', alpha=0.35)
     plt.tight_layout()
     plt.savefig(save_path, dpi=150)
     plt.close()
     
     return fig, ax
+
+def plot_accuracy_vs_rounds(save_path='./data/accuracy_vs_rounds.png'):
+    """
+    Plot strategy prediction accuracy vs number of rounds for Forward Algorithm and Bayes' Theorem.
+    Generates fresh player data for each round count and re-runs both algorithms.
+    Each point shows the % of correct strategy predictions using n rounds of data.
+    Args:
+        save_path (str): Path to save the plot image
+    """
+    fwd_acc = []
+    bay_acc = []
+ 
+    for n_rounds in range(1, 21):
+        # Generate player data with n_rounds hands
+        player_data(1000, n_rounds)
+ 
+        # Load the generated data
+        df = pd.read_csv('./data/player_data.tsv', sep='\t')
+        df['actions'] = df['actions'].apply(eval)
+        df['true_states'] = df['true_states'].apply(eval)
+ 
+        fwd_correct = []
+        bay_correct = []
+ 
+        for i in range(len(df)):
+            actions = df['actions'].iloc[i]
+            states = df['true_states'].iloc[i]
+            true = df['true_strategy'].iloc[i]
+ 
+            # Forward algorithm prediction on n_rounds of data
+            fwd_pred = STRATEGY_TYPES[np.argmax(forward_algo(actions))]
+            fwd_correct.append(fwd_pred == true)
+ 
+            # Bayes' prediction on n_rounds of data
+            post = strategy_posterior(actions, states)
+            bay_pred = max(post, key=post.get)
+            bay_correct.append(bay_pred == true)
+ 
+        # Average accuracy across all players for this round
+        fwd_acc.append(np.mean(fwd_correct) * 100)
+        bay_acc.append(np.mean(bay_correct) * 100)
+ 
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(range(1, 21), bay_acc, label='Bayes\' Theorem', color='#C73E1D', linewidth=2, marker='o')   
+    ax.plot(range(1, 21), fwd_acc, label='Forward Algorithm', color='#6C9EBF', linewidth=2, marker='o')
+ 
+    # Formatting and labels
+    ax.set_xticks(range(1, 21))
+    ax.set_xlabel('Number of Training Hands', fontweight='bold', labelpad=15)
+    ax.set_ylabel('Accuracy (%)', fontweight='bold', labelpad=15)
+    ax.set_yticks(np.arange(60, 105, 5)) 
+    ax.set_ylim(60, 105)
+    ax.legend()
+    ax.grid(True, linestyle='-', alpha=0.7)
+ 
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150)
+    plt.close()
+    return fig, ax
+ 
 
 
 
@@ -92,7 +141,7 @@ def plot_hand_strength_heatmap(data_path='./data/player_data.tsv', save_path='./
 
     # Draw the heat map
     def draw_heatmap(ax, matrix, title):
-        cmap = LinearSegmentedColormap.from_list('custom', ['white', '#F28E2B', "#B05B00"])
+        cmap = LinearSegmentedColormap.from_list('custom', ['white', 'black'])
         im = ax.imshow(matrix, vmin=0, vmax=100, cmap=cmap)
 
         # Add black lines between cells
@@ -136,12 +185,12 @@ def plot_hand_strength_over_streets(data_path='./data/player_data.tsv', save_pat
     df = pd.read_csv(data_path, sep='\t')
     for col in ['true_states', 'forward_pred_strategy_strength', 'bayes_pred_strategy_strength']:
         df[col] = df[col].apply(eval)
-
+ 
     # Flatten into 2D arrays: rows = players, cols = time steps
     true_all = np.array(df['true_states'].tolist())
     fwd_all = np.array(df['forward_pred_strategy_strength'].tolist())
     bay_all = np.array(df['bayes_pred_strategy_strength'].tolist())
-
+ 
     # Calculate accuracy at each street 
     n_streets = len(BETTING_ROUNDS)
     fwd_acc = []
@@ -151,91 +200,27 @@ def plot_hand_strength_over_streets(data_path='./data/player_data.tsv', save_pat
         street_cols = range(street_idx, true_all.shape[1], n_streets)
         fwd_acc.append((fwd_all[:, street_cols] == true_all[:, street_cols]).mean() * 100)
         bay_acc.append((bay_all[:, street_cols] == true_all[:, street_cols]).mean() * 100)
-
-    fig, ax = plt.subplots(figsize=(8, 5))
+ 
     x = np.arange(n_streets)
-    width = 0.35
-
+ 
     fig, ax = plt.subplots(figsize=(8, 5))
-    bars1 = ax.bar(x - width/2, fwd_acc, width, label='Forward Algorithm', color='#6C9EBF', edgecolor='black', linewidth=1)
-    bars2 = ax.bar(x + width/2, bay_acc, width, label='Bayes\' Theorem', color='#C73E1D', edgecolor='black', linewidth=1)
-
-    for bar in bars1:
-        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
-                f'{bar.get_height():.1f}%', ha='center', va='bottom', fontsize=10)
-    for bar in bars2:
-        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
-                f'{bar.get_height():.1f}%', ha='center', va='bottom', fontsize=10)
-
+    ax.plot(x - 0.1, fwd_acc, 'o', color='#6C9EBF', label='Forward Algorithm', markersize=10)
+    ax.plot(x + 0.1, bay_acc, 'o', color='#C73E1D', label='Bayes\' Theorem', markersize=10)
+ 
+    all_vals = fwd_acc + bay_acc
+    y_min = max(0, min(all_vals) - 3)
+    y_max = min(100, max(all_vals) + 3)
+ 
     # Add labels
     ax.set_xticks(x)
     ax.set_xticklabels(BETTING_ROUNDS, ha='center', fontsize=10)
     ax.set_xlabel('Street', fontweight='bold', labelpad=15)
     ax.set_ylabel('Accuracy (%)', fontweight='bold', labelpad=15)
-    ax.set_yticks(np.arange(0, 110, 10)) 
-    ax.set_ylim(0, 110)
+    ax.set_yticks(np.arange(50, 71, 2))
+    ax.set_ylim(50, 71)
     ax.legend()
-    ax.grid(True, axis='y', linestyle='-', alpha=0.35)
-
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=150)
-    plt.close()
-    return fig, ax
-
-def plot_accuracy_vs_rounds(save_path='./data/accuracy_vs_rounds.png'):
-    """
-    Plot strategy prediction accuracy vs number of rounds for Forward Algorithm and Bayes' Theorem.
-    Generates fresh player data for each round count and re-runs both algorithms.
-    Each point shows the % of correct strategy predictions using n rounds of data.
-    Args:
-        save_path (str): Path to save the plot image
-    """
-    fwd_acc = []
-    bay_acc = []
-
-    for n_rounds in range(1, 21):
-        # Generate player data with n_rounds hands
-        player_data(100, n_rounds)
-
-        # Load the generated data
-        df = pd.read_csv('./data/player_data.tsv', sep='\t')
-        df['actions'] = df['actions'].apply(eval)
-        df['true_states'] = df['true_states'].apply(eval)
-
-        fwd_correct = []
-        bay_correct = []
-
-        for i in range(len(df)):
-            actions = df['actions'].iloc[i]
-            states = df['true_states'].iloc[i]
-            true = df['true_strategy'].iloc[i]
-
-            # Forward algorithm prediction on n_rounds of data
-            fwd_pred = STRATEGY_TYPES[np.argmax(forward_algo(actions))]
-            fwd_correct.append(fwd_pred == true)
-
-            # Bayes' prediction on n_rounds of data
-            post = strategy_posterior(actions, states)
-            bay_pred = max(post, key=post.get)
-            bay_correct.append(bay_pred == true)
-
-        # Average accuracy across all players for this round
-        fwd_acc.append(np.mean(fwd_correct) * 100)
-        bay_acc.append(np.mean(bay_correct) * 100)
-
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(range(1, 21), bay_acc, label='Bayes\' Theorem', color='#C73E1D', linewidth=2, marker='o')   
-    ax.plot(range(1, 21), fwd_acc, label='Forward Algorithm', color='#6C9EBF', linewidth=2, marker='o')
-
-    # Formatting and labels
-    ax.set_xticks(range(1, 21))
-    ax.set_xlabel('Number of Training Hands', fontweight='bold', labelpad=15)
-    ax.set_ylabel('Accuracy (%)', fontweight='bold', labelpad=15)
-    ax.set_yticks(np.arange(0, 105, 5)) 
-    ax.set_ylim(0, 105)
-    ax.legend()
-    ax.grid(True, linestyle='--', alpha=0.7)
-
+    ax.grid(True, axis='both', linestyle='-', alpha=0.35)
+ 
     plt.tight_layout()
     plt.savefig(save_path, dpi=150)
     plt.close()

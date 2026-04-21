@@ -70,7 +70,7 @@ def print_viterbi_results(filepath, method):
 
     Args:
         filepath (str): Path to player data file
-        method (str): The strategy inference method to be used, either "Forward Algorithm" of "Bayes' Inference"
+        method (str): the strategy inference method to be used, either "Forward Algorithm" of "Bayes' Inference"
 
     Prints:
         Accuracy percentage for state prediction.
